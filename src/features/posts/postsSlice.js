@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
-import { db } from "../../firebase";
+import { db, storage } from "../../firebase";
+import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
 
 export const fetchPostsByUser = createAsyncThunk(
   "posts/fetchByUser",
@@ -23,11 +24,18 @@ export const fetchPostsByUser = createAsyncThunk(
 
 export const savePost = createAsyncThunk(
   "posts/savePost",
-  async ({ postContent, userId }) => {
+  async ({ postContent, userId, file }) => {
     try {
+      const imageRef = ref(storage, `posts/${file.name}`);
+      const response = await uploadBytes(imageRef, file);
+      const imageUrl = await getDownloadURL(response.ref);
       const postsRef = collection(db, `users/${userId}/posts`);
       console.log(`users/${userId}/posts`);
-      //since no ID is given, firestore auto generate a unique ID for this new document
+      await setDoc(newPostRef, {
+        content: postContent,
+        imageUrl,
+        likes: [],
+      });
       const newPostRef = doc(postsRef);
       console.log(postContent);
       await setDoc(newPostRef, { content: postContent, likes: [] });
