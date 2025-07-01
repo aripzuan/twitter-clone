@@ -3,6 +3,7 @@ import { useContext, useState } from "react";
 import { useDispatch } from "react-redux";
 import { likePost, removeLikeFromPost } from "../features/posts/postsSlice";
 import { AuthContext } from "./AuthProvider";
+import UpdatePostModal from "./UpdatePostModal";
 
 export default function ProfilePostCard({ post }) {
   const { content, id: postId, imageUrl } = post;
@@ -16,8 +17,15 @@ export default function ProfilePostCard({ post }) {
   const pic =
     "https://pbs.twimg.com/profile_images/1587405892437221376/h167Jlb2_400x400.jpg";
 
-  const BASE_URL =
-    "https://c9ba7f53-46e6-4d63-b3f9-3943f9049c80-00-8846nsg8of01.sisko.replit.dev";
+  const [showUpdateModal, setShowUpdateModal] = useState(false);
+
+  const handleShowUpdateModal = () => {
+    setShowUpdateModal(true);
+    }
+
+    const handleCloseUpdateModal = () => {
+      setShowUpdateModal(false); 
+    }
 
   const handleLike = () => {
     isLiked ? removeFromLikes() : addToLikes();
@@ -70,6 +78,18 @@ export default function ProfilePostCard({ post }) {
           <Button variant="light">
             <i className="bi bi-upload"></i>
           </Button>
+            <Button variant="light" onClick={handleShowUpdateModal}>
+                <i className="bi bi-pencil-square"></i>
+            </Button>
+            <Button variant="light">
+                <i className="bi bi-trash"></i>
+            </Button>
+            <UpdatePostModal
+                show={showUpdateModal}
+                handleClose={handleCloseUpdateModal}
+                postId={postId}
+                originalPostContent={content}
+            />
         </div>
       </Col>
     </Row>

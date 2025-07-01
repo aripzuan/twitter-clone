@@ -1,7 +1,39 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { collection, doc, getDoc, getDocs, setDoc } from "firebase/firestore";
+import { collection, doc, getDoc, getDocs, setDoc, updateDoc } from "firebase/firestore";
 import { db, storage } from "../../firebase";
 import { getDownloadURL, ref, uploadBytes } from "firebase/storage";
+
+export const updatePost = createAsyncThunk(
+  "posts/updatePost",
+  async ({ postId, NewPostContent, userId, newFile }) => {
+    try {
+      let newImageUrl;
+      if (newFile) {
+      const imageRef = ref(storage, `posts/${newFile.name}`);
+      const response = await uploadBytes(imageRef, newFile);
+       newImageUrl= await getDownloadURL(response.ref);
+      }
+      const postRef = doc(db, `users/${userId}/posts/${postId}`);
+      const postSnap = await getDoc(postRef);
+      if (postSnap.exists()) {
+        const postData = postSnap.data();
+        const updatedData = {
+          ...postData,
+          content: NewPostContent || postData.content,
+          imageUrl: newImageUrl || postData.imageUrl,
+        };
+        await updateDoc(postRef, updatedData)
+        const updatedPost = {id: postId, ...updatedData};
+        return updatedPost;
+      } else {
+        throw new Error("Post not found");
+      }
+    } catch (error) {
+      console(error);
+      throw error;
+    }
+  }
+);
 
 export const fetchPostsByUser = createAsyncThunk(
   "posts/fetchByUser",
@@ -26,21 +58,24 @@ export const savePost = createAsyncThunk(
   "posts/savePost",
   async ({ postContent, userId, file }) => {
     try {
+      let imageUrl = '';
+      console.log(file);
+      if (file !== null) {
       const imageRef = ref(storage, `posts/${file.name}`);
       const response = await uploadBytes(imageRef, file);
-      const imageUrl = await getDownloadURL(response.ref);
+       imageUrl = await getDownloadURL(response.ref);
+      }
       const postsRef = collection(db, `users/${userId}/posts`);
       console.log(`users/${userId}/posts`);
+      const newPostRef = doc(postsRef);
       await setDoc(newPostRef, {
         content: postContent,
         imageUrl,
         likes: [],
       });
-      const newPostRef = doc(postsRef);
-      console.log(postContent);
-      await setDoc(newPostRef, { content: postContent, likes: [] });
+      
       const newPost = await getDoc(newPostRef);
-
+      console.log(postContent);
       const post = {
         id: newPost.id,
         ...newPost.data(),
@@ -127,7 +162,15 @@ const postsSlice = createSlice({
             (id) => id !== userId
           );
         }
-      });
+      })
+        .addCase(updatePost.fulfilled, (state, action) => {
+            const updatedPost = action.payload;
+            const postIndex = state.posts.findIndex((post) => post.id === updatedPost.id);
+            
+            if (postIndex !== -1) {
+            state.posts[postIndex] = updatedPost;
+            }
+        });
   },
 });
 
